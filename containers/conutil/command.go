@@ -23,17 +23,18 @@ var Command = cli.Command{
 	},
 }
 
-func measureContainer(context *cli.Context) {
+func measureContainer(context *cli.Context) error {
 	if len(containerID) <= 0 {
 		fmt.Println("container id cannot be empty")
-		return
+		return nil
 	}
 	fmt.Printf("Measure Container ID %s \n ", containerID)
 
 	u, err := GetContainerUtilization(containerID)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return err
 	}
 	fmt.Println(u)
+	return nil
 }

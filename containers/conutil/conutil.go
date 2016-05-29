@@ -32,6 +32,11 @@ func GetContainerUtilization(ContainerID string) (ContainerMetrics, error) {
 		return res, err
 	}
 	res.ProcessCount = pcount
+	tcount, err := getTaskCount(ContainerID)
+	if err != nil {
+		return res, err
+	}
+	res.TaskCount = tcount
 	fs, err := getRootFSSize(ContainerID)
 	if err != nil {
 		return res, err
@@ -82,6 +87,20 @@ func getUsedMemory(containerID string) (int, error) {
 //get memory in Megabytes
 func getProcessesCount(containerID string) (int, error) {
 	file, err := config.ReadControlGroupFile(containerID, "cpu", "cgroup.procs")
+	if err != nil {
+		return 0, err
+	}
+	arr := strings.Split(file, "\n")
+	if err != nil {
+		//fmt.Println(err)
+		return 0, err
+	}
+
+	return len(arr) - 1, nil
+}
+
+func getTaskCount(containerID string) (int, error) {
+	file, err := config.ReadControlGroupFile(containerID, "cpu", "tasks")
 	if err != nil {
 		return 0, err
 	}
