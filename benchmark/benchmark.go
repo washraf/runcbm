@@ -20,18 +20,13 @@ func Run(containerID string, n int) error {
 	if err != nil {
 		return err
 	}
-
+	err = deleteCheckPointData(condir)
+	if err != nil {
+		return err
+	}
 	measuresList := make(Measures, 0)
 	for i := 1; i <= n; i++ {
-		delcommand := exec.Command("rm")
-		delcommand.Dir = condir
-		delcommand.Args = append(delcommand.Args, "-rf")
-		delcommand.Args = append(delcommand.Args, "checkpoint/")
-		r, err := delcommand.CombinedOutput()
-		if err != nil {
-			fmt.Println("Delete Checkpoint error")
-			return err
-		}
+
 		fmt.Println("trial number ", i)
 		//time.Sleep(time.Second * 5)
 		fmt.Println("Sleep for 5 Seconds")
@@ -45,10 +40,13 @@ func Run(containerID string, n int) error {
 		measure.ID = i
 		measure.ProcessCount = u.ProcessCount
 		measure.TaskCount = u.TaskCount
-		measure.MemorySize = u.UsedMemory
+		measure.InRAMSize = u.UsedRAM
+		measure.SwappedMemorySize = u.SwappedMemory
+		measure.TotalMemorySize = u.TotalMemory
+
 		command := exec.Command("time", "-f", "%e", "runc", "checkpoint", "--tcp-established", "--empty-ns", "network", containerID)
 		command.Dir = condir
-		r, err = command.CombinedOutput()
+		r, err := command.CombinedOutput()
 		if err != nil {
 			fmt.Println("Checkpoint error")
 			return err
@@ -62,6 +60,11 @@ func Run(containerID string, n int) error {
 			return err
 		}
 		measure.Checkpointsize = s
+
+		fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
+		time.Sleep(time.Second * 5)
+
+		//The Restore Process
 		command = exec.Command("time", "-f", "%e", "runc", "restore", "-d", "--tcp-established", containerID)
 		//command.Dir = "/containers/"+container+"/"
 		command.Dir = condir
@@ -78,15 +81,32 @@ func Run(containerID string, n int) error {
 		if err != nil {
 			return err
 		}
+		err = deleteCheckPointData(condir)
+		if err != nil {
+			return err
+		}
 	}
 	printlist(measuresList)
+	return nil
+}
+
+func deleteCheckPointData(condir string) error {
+	delcommand := exec.Command("rm")
+	delcommand.Dir = condir
+	delcommand.Args = append(delcommand.Args, "-rf")
+	delcommand.Args = append(delcommand.Args, "checkpoint/")
+	err := delcommand.Run()
+	if err != nil {
+		fmt.Println("Delete Checkpoint error")
+		return err
+	}
 	return nil
 }
 
 func printlist(measuresList Measures) {
 	fmt.Printf("ID\tProcessCount\tTaskCount\tMemorySize\tCheckpointTime\tCheckpointsize\tRestoretime\n")
 	for _, m := range measuresList {
-		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.MemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime)
+		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.TotalMemorySize, m.InRAMSize, m.SwappedMemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime)
 	}
 }
 func writetoFile(filename string, m Measure) error {
@@ -101,7 +121,11 @@ func writetoFile(filename string, m Measure) error {
 	buffer.WriteString(",")
 	buffer.WriteString(strconv.FormatInt(int64(m.TaskCount), 10))
 	buffer.WriteString(",")
-	buffer.WriteString(strconv.FormatInt(int64(m.MemorySize), 10))
+	buffer.WriteString(strconv.FormatInt(int64(m.TotalMemorySize), 10))
+	buffer.WriteString(",")
+	buffer.WriteString(strconv.FormatInt(int64(m.InRAMSize), 10))
+	buffer.WriteString(",")
+	buffer.WriteString(strconv.FormatInt(int64(m.SwappedMemorySize), 10))
 	buffer.WriteString(",")
 	buffer.WriteString(floatToString(m.CheckpointTime))
 	buffer.WriteString(",")

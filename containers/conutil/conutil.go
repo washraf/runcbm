@@ -21,11 +21,19 @@ func GetContainerUtilization(ContainerID string) (ContainerMetrics, error) {
 	}
 	res.CPUTime = ct
 
-	m, err := getUsedMemory(ContainerID)
+	m, err := getUsedMemoryInMemory(ContainerID)
 	if err != nil {
 		return res, err
 	}
-	res.UsedMemory = m
+	res.UsedRAM = m
+
+	t, err := getUsedMemoryTotal(ContainerID)
+	if err != nil {
+		return res, err
+	}
+	res.TotalMemory = t
+
+	res.SwappedMemory = t - m
 
 	pcount, err := getProcessesCount(ContainerID)
 	if err != nil {
@@ -71,8 +79,22 @@ func getCPUUtlizationPercent(ContainerID string) (float64, uint64, error) {
 }
 
 //get memory in Megabytes
-func getUsedMemory(containerID string) (int, error) {
+func getUsedMemoryInMemory(containerID string) (int, error) {
 	v, err := config.ReadControlGroupFile(containerID, "memory", "memory.usage_in_bytes")
+	if err != nil {
+		return 0, err
+	}
+	memory, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil {
+		return 0, err
+	}
+
+	return memory / 1048576, nil
+}
+
+//get memory in Megabytes
+func getUsedMemoryTotal(containerID string) (int, error) {
+	v, err := config.ReadControlGroupFile(containerID, "memory", "memory.memsw.usage_in_bytes")
 	if err != nil {
 		return 0, err
 	}
