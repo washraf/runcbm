@@ -15,7 +15,7 @@ import (
 )
 
 //Run ..
-func Run(containerID string, n int) error {
+func Run(containerID string, n int, move int, other string) error {
 	condir, err := config.FindContainerBundle(containerID)
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func Run(containerID string, n int) error {
 
 		fmt.Println("trial number ", i)
 		//time.Sleep(time.Second * 5)
-		fmt.Println("Sleep for 5 Seconds")
+		fmt.Println("Let it RUN for 5 Seconds")
 		time.Sleep(time.Second * 5)
 		measure := Measure{}
 		u, err := conutil.GetContainerUtilization(containerID)
@@ -63,6 +63,32 @@ func Run(containerID string, n int) error {
 
 		fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
 		time.Sleep(time.Second * 5)
+
+		if move == 1 || move == 2 {
+			command := exec.Command("time", "-f", "%e", "mv", "-r", "checkpoint/", other)
+			command.Dir = condir
+			r, err := command.CombinedOutput()
+			if err != nil {
+				fmt.Println("1st copy fail")
+				return err
+			}
+			ct1, _ := strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
+
+			command = exec.Command("time", "-f", "%e", "mv", "-r", "checkpoint/", condir)
+			command.Dir = other
+			r, err = command.CombinedOutput()
+			if err != nil {
+				fmt.Println("2st copy fail")
+				return err
+			}
+			ct2, _ := strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
+			ct1 += ct2
+
+			if move == 1 {
+				ct1 /= 2
+			}
+			measure.CopyTime = ct1
+		}
 
 		//The Restore Process
 		command = exec.Command("time", "-f", "%e", "runc", "restore", "-d", "--tcp-established", containerID)
@@ -104,9 +130,9 @@ func deleteCheckPointData(condir string) error {
 }
 
 func printlist(measuresList Measures) {
-	fmt.Printf("ID\tProcessCount\tTaskCount\tMemorySize\tCheckpointTime\tCheckpointsize\tRestoretime\n")
+	fmt.Printf("ID\tProcessCount\tTaskCount\tMemorySize\tInRam\tSwapped\tCheckpointTime\tCheckpointsize\tRestoretime\tCopyTime\n")
 	for _, m := range measuresList {
-		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.TotalMemorySize, m.InRAMSize, m.SwappedMemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime)
+		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.TotalMemorySize, m.InRAMSize, m.SwappedMemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime, m.CopyTime)
 	}
 }
 func writetoFile(filename string, m Measure) error {
@@ -132,6 +158,8 @@ func writetoFile(filename string, m Measure) error {
 	buffer.WriteString(strconv.FormatInt(int64(m.Checkpointsize), 10))
 	buffer.WriteString(",")
 	buffer.WriteString(floatToString(m.Restoretime))
+	buffer.WriteString(",")
+	buffer.WriteString(floatToString(m.CopyTime))
 	buffer.WriteString("\n")
 
 	_, err = f.WriteString(string(buffer.Bytes()))

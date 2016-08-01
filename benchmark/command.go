@@ -9,8 +9,8 @@ import (
 	"github.com/washraf/runcbm/containers/conctrl"
 )
 
-var containerID, bundle, logFile string
-var count int
+var containerID, bundle, logFile, other string
+var count, move int
 
 //Command the command it self
 var Command = cli.Command{
@@ -41,6 +41,18 @@ var Command = cli.Command{
 			Destination: &logFile,
 			Value:       "/containers/log",
 		},
+		cli.IntFlag{
+			Name:        "move",
+			Usage:       "0 for no move 1 for half move 2 for 2 double move",
+			Value:       0,
+			Destination: &move,
+		},
+		cli.StringFlag{
+			Name:        "other",
+			Usage:       "location for move and back",
+			Destination: &other,
+			Value:       "/coniscis/",
+		},
 	},
 }
 
@@ -61,7 +73,7 @@ func benchMark(context *cli.Context) error {
 	fmt.Println("Sleep for 2 Seconds")
 	time.Sleep(time.Second * 2)
 
-	err := Run(containerID, count)
+	err := Run(containerID, count, move, other)
 	if err != nil {
 		fmt.Println(err)
 		return err
