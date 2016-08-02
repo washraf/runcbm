@@ -11,7 +11,8 @@ type Measure struct {
 	CheckpointTime    float64
 	Checkpointsize    int
 	Restoretime       float64
-	CopyTime          float64
+	CopyFromTime      float64
+	CopyTOTime        float64
 }
 
 //Measures ...

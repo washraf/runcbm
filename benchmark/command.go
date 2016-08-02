@@ -43,7 +43,7 @@ var Command = cli.Command{
 		},
 		cli.IntFlag{
 			Name:        "move",
-			Usage:       "0 for no move 1 for half move 2 for 2 double move",
+			Usage:       "0 for no move; 3 for trial 3 & 4 for trial 4",
 			Value:       0,
 			Destination: &move,
 		},

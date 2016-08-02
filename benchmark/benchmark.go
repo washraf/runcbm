@@ -60,7 +60,7 @@ func Run(containerID string, n int, move int, other string) error {
 			return err
 		}
 		measure.Checkpointsize = s
-		if move==0 {
+		if move == 0 {
 			fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
 			time.Sleep(time.Second * 5)
 		}
@@ -74,7 +74,7 @@ func Run(containerID string, n int, move int, other string) error {
 			}
 			ct1, _ := strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
 			fmt.Println("sleep between move and back")
-	                time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 5)
 
 			command = exec.Command("time", "-f", "%e", "mv", "checkpoint/", condir)
 			command.Dir = other
@@ -84,14 +84,13 @@ func Run(containerID string, n int, move int, other string) error {
 				return err
 			}
 			ct2, _ := strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
-			ct1 += ct2
+			measure.CopyTOTime = ct1
 
-			if move == 1 {
-				ct1 /= 2.0
+			if move == 3 {
+				measure.CopyFromTime = ct2
 			}
-			measure.CopyTime = ct1
-			err=deleteCheckPointData(other)
-			if err!=nil {
+			err = deleteCheckPointData(other)
+			if err != nil {
 				fmt.Println("delete from copy err")
 				return err
 			}
@@ -137,9 +136,9 @@ func deleteCheckPointData(condir string) error {
 }
 
 func printlist(measuresList Measures) {
-	fmt.Printf("ID\tProcessCount\tTaskCount\tMemorySize\tInRam\tSwapped\tCheckpointTime\tCheckpointsize\tRestoretime\tCopyTime\n")
+	fmt.Printf("ID\tProcessCount\tTaskCount\tMemorySize\tInRam\tSwapped\tCheckpointTime\tCheckpointsize\tRestoretime\tCopyTOTime\tCopyFrom\n")
 	for _, m := range measuresList {
-		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.TotalMemorySize, m.InRAMSize, m.SwappedMemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime, m.CopyTime)
+		fmt.Printf("%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t\t%v\t%v\t%v\n", m.ID, m.ProcessCount, m.TaskCount, m.TotalMemorySize, m.InRAMSize, m.SwappedMemorySize, m.CheckpointTime, m.Checkpointsize, m.Restoretime, m.CopyTOTime, m.CopyFromTime)
 	}
 }
 func writetoFile(filename string, m Measure) error {
@@ -166,7 +165,9 @@ func writetoFile(filename string, m Measure) error {
 	buffer.WriteString(",")
 	buffer.WriteString(floatToString(m.Restoretime))
 	buffer.WriteString(",")
-	buffer.WriteString(floatToString(m.CopyTime))
+	buffer.WriteString(floatToString(m.CopyTOTime))
+	buffer.WriteString(",")
+	buffer.WriteString(floatToString(m.CopyFromTime))
 	buffer.WriteString("\n")
 
 	_, err = f.WriteString(string(buffer.Bytes()))
