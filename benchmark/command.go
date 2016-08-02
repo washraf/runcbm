@@ -51,7 +51,7 @@ var Command = cli.Command{
 			Name:        "other",
 			Usage:       "location for move and back",
 			Destination: &other,
-			Value:       "/coniscis/",
+			Value:       "/coniscsi/",
 		},
 	},
 }

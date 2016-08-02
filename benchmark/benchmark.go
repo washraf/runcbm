@@ -60,12 +60,12 @@ func Run(containerID string, n int, move int, other string) error {
 			return err
 		}
 		measure.Checkpointsize = s
-
-		fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
-		time.Sleep(time.Second * 5)
-
+		if move==0 {
+			fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
+			time.Sleep(time.Second * 5)
+		}
 		if move == 1 || move == 2 {
-			command := exec.Command("time", "-f", "%e", "mv", "-r", "checkpoint/", other)
+			command := exec.Command("time", "-f", "%e", "mv", "checkpoint/", other)
 			command.Dir = condir
 			r, err := command.CombinedOutput()
 			if err != nil {
@@ -73,8 +73,10 @@ func Run(containerID string, n int, move int, other string) error {
 				return err
 			}
 			ct1, _ := strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
+			fmt.Println("sleep between move and back")
+	                time.Sleep(time.Second * 5)
 
-			command = exec.Command("time", "-f", "%e", "mv", "-r", "checkpoint/", condir)
+			command = exec.Command("time", "-f", "%e", "mv", "checkpoint/", condir)
 			command.Dir = other
 			r, err = command.CombinedOutput()
 			if err != nil {
@@ -85,9 +87,14 @@ func Run(containerID string, n int, move int, other string) error {
 			ct1 += ct2
 
 			if move == 1 {
-				ct1 /= 2
+				ct1 /= 2.0
 			}
 			measure.CopyTime = ct1
+			err=deleteCheckPointData(other)
+			if err!=nil {
+				fmt.Println("delete from copy err")
+				return err
+			}
 		}
 
 		//The Restore Process
