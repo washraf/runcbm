@@ -2,6 +2,8 @@ package benchmark
 
 import (
 	"fmt"
+	"os/exec"
+	"strconv"
 
 	"time"
 
@@ -68,20 +70,42 @@ func benchMark(context *cli.Context) error {
 
 		return nil
 	}
-	fmt.Printf("Bench Mark Container ID %s \n ", containerID)
-	conctrl.StartContainer(containerID, bundle)
-	fmt.Println("Sleep for 2 Seconds")
-	time.Sleep(time.Second * 2)
+	for d := 1; d <= 40; d++ {
 
-	err := Run(containerID, count, move, other)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	err = conctrl.CleanUp(containerID)
-	if err != nil {
-		fmt.Println(err)
-		return err
+		fmt.Println("Create config for iteration " + strconv.Itoa(d))
+		err := setProcessesMemory(d, bundle)
+		if err != nil {
+			fmt.Println("cannot create config")
+			return err
+		}
+		fmt.Printf("Bench Mark Container ID %s \n ", containerID)
+
+		conctrl.StartContainer(containerID, bundle)
+		fmt.Println("Sleep for 2 Seconds")
+		time.Sleep(time.Second * 2)
+
+		err = Run(d, containerID, count, move, other)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		err = conctrl.CleanUp(containerID)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 	}
 	return nil
+}
+
+func setProcessesMemory(i int, condir string) error {
+	command := exec.Command("ocitools", "generate",
+		"--args", "stress",
+		"--args", "-c", "--args", "8",
+		"--args", "-m", "--args", strconv.Itoa(i*2),
+		"--args", "--vm-bytes", "--args", "25M",
+		"--args", "-t", "--args", "60s")
+	command.Dir = condir
+	_, err := command.CombinedOutput()
+	return err
 }

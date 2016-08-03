@@ -15,7 +15,7 @@ import (
 )
 
 //Run ..
-func Run(containerID string, n int, move int, other string) error {
+func Run(d int, containerID string, n int, move int, other string) error {
 	condir, err := config.FindContainerBundle(containerID)
 	if err != nil {
 		return err
@@ -24,6 +24,7 @@ func Run(containerID string, n int, move int, other string) error {
 	if err != nil {
 		return err
 	}
+
 	measuresList := make(Measures, 0)
 	for i := 1; i <= n; i++ {
 
@@ -37,7 +38,7 @@ func Run(containerID string, n int, move int, other string) error {
 			fmt.Println("Read Utilization error")
 			return err
 		}
-		measure.ID = i
+		measure.ID = d * i
 		measure.ProcessCount = u.ProcessCount
 		measure.TaskCount = u.TaskCount
 		measure.InRAMSize = u.UsedRAM
@@ -64,7 +65,8 @@ func Run(containerID string, n int, move int, other string) error {
 			fmt.Println("Sleep for 5 Seconds between checkpoint and restore")
 			time.Sleep(time.Second * 5)
 		}
-		if move == 1 || move == 2 {
+
+		if move == 3 || move == 4 {
 			command := exec.Command("time", "-f", "%e", "mv", "checkpoint/", other)
 			command.Dir = condir
 			r, err := command.CombinedOutput()
