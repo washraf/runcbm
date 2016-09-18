@@ -9,7 +9,7 @@ import (
 //StartContainer Starts a Container at the start of the simmulation
 func StartContainer(containerID, dir string) error {
 	fmt.Println("Starting Container")
-	command := exec.Command("time", "-f", "%e", "runc", "start", "-d", containerID)
+	command := exec.Command("time", "-f", "%e", "runc", "run", "-d", containerID)
 	command.Dir = dir
 	err := command.Start()
 	if err != nil {

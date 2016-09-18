@@ -45,14 +45,24 @@ func Run(d int, containerID string, n int, move int, other string) error {
 		measure.SwappedMemorySize = u.SwappedMemory
 		measure.TotalMemorySize = u.TotalMemory
 
-		command := exec.Command("time", "-f", "%e", "runc", "checkpoint", "--tcp-established", "--empty-ns", "network", containerID)
+		//command := exec.Command("time", "-f", "%e", "runc", "checkpoint", "--tcp-established", "--empty-ns", "network", "--work-path", ".", containerID)
+		command := exec.Command("runc", "checkpoint", "--tcp-established", "--empty-ns", "network", "--work-path", ".", containerID)
 		command.Dir = condir
-		r, err := command.CombinedOutput()
+		err = command.Run()
 		if err != nil {
 			fmt.Println("Checkpoint error")
 			return err
 		}
-		measure.CheckpointTime, _ = strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
+		measure.CheckpointTime = 0
+		xx, _ := common.ReadUsingCrit(condir, "stats-dump", "dump", "freezing_time", "frozen_time")
+		for _, x := range xx {
+			fmt.Println(x)
+			t, _ := strconv.ParseFloat(strings.TrimSpace(string(x)), 64)
+			fmt.Println(t / 1000000.0)
+			measure.CheckpointTime += (t / 1000000.0)
+		}
+
+		//measure.CheckpointTime, _ = strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
 		s, err := common.FindDiskSizeMB(condir + "/checkpoint/")
 		if err != nil {
 			fmt.Println("Read Checkpoint Disk size error")
@@ -99,17 +109,24 @@ func Run(d int, containerID string, n int, move int, other string) error {
 		}
 
 		//The Restore Process
-		command = exec.Command("time", "-f", "%e", "runc", "restore", "-d", "--tcp-established", containerID)
+		//command = exec.Command("time", "-f", "%e", "runc", "restore", "-d", "--tcp-established", "--work-path", ".", containerID)
+		command = exec.Command("runc", "restore", "-d", "--tcp-established", "--work-path", ".", containerID)
 		//command.Dir = "/containers/"+container+"/"
 		command.Dir = condir
 
-		r, err = command.CombinedOutput()
+		err = command.Run()
 		if err != nil {
 			fmt.Println("Restore error")
-
 			return err
 		}
-		measure.Restoretime, _ = strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
+		xx, _ = common.ReadUsingCrit(condir, "stats-restore", "restore", "restore_time")
+		measure.Restoretime = 0
+		for _, x := range xx {
+			fmt.Println(x)
+			t, _ := strconv.ParseFloat(strings.TrimSpace(string(x)), 64)
+			measure.Restoretime += (t / 1000000.0)
+		}
+		//measure.Restoretime, _ = strconv.ParseFloat(strings.TrimSpace(string(r)), 64)
 		measuresList = append(measuresList, measure)
 		err = writetoFile(logFile, measure)
 		if err != nil {
